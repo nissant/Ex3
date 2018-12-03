@@ -3,6 +3,7 @@
 Authors			- Eli Slavutsky (308882992) & Nisan Tagar (302344031)
 Project Name	- Ex3
 Description		- This program ..
+				- This module handles the organizing/sorting thread and access to memory buffer
 */
 
 #include <windows.h>
@@ -13,8 +14,8 @@ Description		- This program ..
 #include <tchar.h>
 
 
-#ifndef MAINHEADER_H
-#define MAINHEADER_H
+#ifndef THREAD_MANAGER_H
+#define THREAD_MANAGER_H
 
 // Includes --------------------------------------------------------------------
 

@@ -21,12 +21,15 @@
     <ClCompile Include="Pythagorean_Thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Thread_Manager.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Pythagorean_Thread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mainHeader.h">
+    <ClInclude Include="Thread_Manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

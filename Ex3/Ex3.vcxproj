@@ -141,9 +141,10 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="Pythagorean_Thread.c" />
+    <ClCompile Include="Thread_Manager.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mainHeader.h" />
+    <ClInclude Include="Thread_Manager.h" />
     <ClInclude Include="Pythagorean_Thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
