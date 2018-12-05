@@ -2,9 +2,8 @@
 /*
 Authors			- Eli Slavutsky (308882992) & Nisan Tagar (302344031)
 Project Name	- Ex3
-Description		- This program ..
-				- This module handles the organizing/sorting thread and access to memory buffer
-				- This is also the main project header file
+Description		- This program finds Pythagorean triplets using thread "parallelism", the triplets are sorted (using n,m comperator) and printed to output file
+				- This module contains main routines and the sorting thread routine
 */
 
 
@@ -14,7 +13,6 @@ Description		- This program ..
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <tchar.h>
 
 
 #ifndef THREAD_MANAGER_H
@@ -41,6 +39,9 @@ typedef struct container{
 	HANDLE *ogen_mutex_array;				// Pointer to array of mutex for each ogen
 	char *ogen_flag_array;					// Pointer to array of flags for each ogen
 	int max_number;							// Max number for the ogen
+
+	char *out_path;							// Path to output file
+	char last_thread_done;					// Signaled when last thread has finished the last ogen calculation
 
 } thread_container;
 

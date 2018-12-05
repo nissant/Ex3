@@ -1,18 +1,23 @@
 /*
 Authors			- Eli Slavutsky (308882992) & Nisan Tagar (302344031)
 Project Name	- Ex3
-Description		- This program ..
-				- This module handles the organizing/sorting thread and access to memory buffer
+Description		- This program finds Pythagorean triplets using thread "parallelism", the triplets are sorted (using n,m comperator) and printed to output file
+				- This module contains main routines and the sorting thread routine
 */
 
+
+// Includes --------------------------------------------------------------------
 #include "Thread_Manager.h"
+
+
+// Function Definitions -------------------------------------------------------
 
 /*
 Function freeThreadContainer
 ------------------------
 Description –
 Parameters	–
-Returns		– None
+Returns		– 
 */
 int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 
@@ -35,6 +40,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 		FALSE,	/* don't lock mutex immediately */
 		NULL); /* un-named */
 		if (ogen_mutex[i] == NULL) {
+			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
 			return -1;
 		}
 		ogen_flags[i] = 0;
@@ -47,6 +53,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 			FALSE,	/* don't lock mutex immediately */
 			NULL); /* un-named */
 		if (buffer[i].data_mutex == NULL) {
+			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
 			return -1;
 		}
 		buffer[i].data_flag = 0;
@@ -58,6 +65,8 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 	}
 	
 	// Load data to container
+	thread_data_ptr->out_path = argv[4];
+	thread_data_ptr->last_thread_done = 0;
 	thread_data_ptr->buffer_size = buffer_size;
 	thread_data_ptr->max_number = max_num;
 	thread_data_ptr->ogen_flag_array = ogen_flags;
@@ -75,7 +84,7 @@ Description –
 Parameters	– 
 Returns		– None
 */
-freeThreadContainer(thread_container *thread_data_ptr) {
+void freeThreadContainer(thread_container *thread_data_ptr) {
 
 	// Close ogen mutex handles
 	for (int i = 0; i < thread_data_ptr->max_number; i++) {
@@ -91,4 +100,51 @@ freeThreadContainer(thread_container *thread_data_ptr) {
 	free(thread_data_ptr->ogen_mutex_array);
 	free(thread_data_ptr->pyth_triple_buffer);
 	free(thread_data_ptr->ogen_flag_array);
+}
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+DWORD WINAPI sortConsumer(LPVOID lpParam) {
+	/*
+	DWORD wait_res;
+	BOOL release_res;
+	LONG previous_count;
+
+	while (TRUE)
+	{
+		//  Sleep for the purposes of the demonstration 
+		Sleep(PRODUCER_WAIT_TIME_IN_MILISECONDS);
+
+		produce_item();
+
+		wait_res = WaitForSingleObject(empty, INFINITE);
+		if (wait_res != WAIT_OBJECT_0) ReportErrorAndEndProgram();
+
+		wait_res = WaitForSingleObject(mutex, INFINITE);
+		if (wait_res != WAIT_OBJECT_0) ReportErrorAndEndProgram();
+
+		// Start Critical Section 
+
+		insert_item(items);
+
+		///End Critical Section 
+
+		release_res = ReleaseMutex(mutex);
+		if (release_res == FALSE) ReportErrorAndEndProgram();
+
+		release_res = ReleaseSemaphore(
+			full,
+			1, 		//  Signal that exactly one cell was filled 
+			&previous_count);
+		if (release_res == FALSE) ReportErrorAndEndProgram();
+		printf("Producer inserted one item. Previous count is: %ld\n", previous_count);
+	}
+	*/
+	return 0;
 }
