@@ -91,10 +91,10 @@ int FindGCD(int n, int m)
 		if (n%i == 0 && m%i == 0)
 			gcd = i;
 	}
-	return 0;
+	return gcd;
 }
 
-int CalcABC(int n, int m, int *a, int *b, int *c)
+void CalcABC(int n, int m, int *a, int *b, int *c)
 {
 	*a = (m*m) - (n*n);
 	*b = 2 * n * m;
