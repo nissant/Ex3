@@ -48,5 +48,6 @@ typedef struct container{
 // Function Declarations -------------------------------------------------------
 DWORD WINAPI sortConsumer(LPVOID lpParam);
 int initThreadContainer(char **argv, thread_container *thread_data_ptr);
+void freeThreadContainer(thread_container *thread_data_ptr);
 
 #endif

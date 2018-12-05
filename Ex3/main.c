@@ -26,7 +26,9 @@ int main(int argc, char *argv[]) {
 	thread_container thread_data;
 	thread_container *thread_data_ptr = &thread_data;
 	if (initThreadContainer(argv, thread_data_ptr) != 0) { 
-
+		printf("Error while creating thread data, couldn't complete the task!\n");
+		freeThreadContainer(thread_data_ptr);
+		exit(EXIT_FAILURE);
 	}
 	
 	int thread_num = atoi(argv[2]);
