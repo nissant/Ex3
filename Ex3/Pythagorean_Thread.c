@@ -4,10 +4,3 @@ Project Name	- Ex3
 Description		- This program finds Pythagorean triplets using thread "parallelism", the triplets are sorted (using n,m comperator) and printed to output file
 				- This module handles the pythgorean triplet calculation thread routines
 */
-
-// Includes --------------------------------------------------------------------
-#include "Thread_Manager.h"
-#include "Pythagorean_Thread.h"
-
-
-// Function Definitions -------------------------------------------------------
