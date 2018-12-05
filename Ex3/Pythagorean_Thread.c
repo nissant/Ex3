@@ -49,14 +49,14 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 				printf("Error when releasing\n");
 				return ERROR_CODE;
 			}
-			CalcTripelt(i + 1, thread_info->max_number); /////////////////////////////////***************
+			CalcTripelt(i + 1, thread_info->max_number, thread_info); /////////////////////////////////***************
 		}
 	}
 
 
 }
 
-int CalcTriplet(int n, int max)
+int CalcTriplet(int n, int max, thread_container *thread_info)
 {
 	int a, b, c;
 	for (int m = n + 1; m < max + 1; m++)
@@ -66,7 +66,7 @@ int CalcTriplet(int n, int max)
 			if (FindGCD(n, m) == 1)
 			{
 				ClaclABC(n, m, &a, &b, &c);
-				// PutTripInBuff()           /////////////////////////////////////****************
+				PutTripInBuff(n, m, a, b, c, thread_info);          /////////////////////////////////////****************
 			}
 			else
 				continue;
@@ -76,6 +76,12 @@ int CalcTriplet(int n, int max)
 			continue;
 	}
 }
+
+int PutTripInBuff(int n, int m, int a, int b, int c, thread_container *thread_info)
+{
+
+}
+
 int FindGCD(int n, int m)
 {
 	int  i, gcd;
