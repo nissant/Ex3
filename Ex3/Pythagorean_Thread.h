@@ -10,6 +10,7 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 #define PYTHAGOREAN_THREAD_H
 
 #define ERROR_CODE -1
+#define SUCCESS_CODE 0
 
 // Includes --------------------------------------------------------------------
 

@@ -13,21 +13,14 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 
 	DWORD				wait_code;
 	BOOL				ret_val;
-	/*
-	DWORD				exitcode;
-
-	int					res;
-	*/
-
 	thread_container	*thread_info = (thread_container*)lpParam;	// Get pointer to relevcant data needed for execution in this thread
-	int ogen;
 
 	for (int i = 0; i < thread_info->max_number; i++)
 	{
-		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access mutex
+		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen mutex
 		if (WAIT_OBJECT_0 != wait_code)
 		{
-			printf("Error when waiting for ogen mutex\n");
+			printf("Error when waiting for ogen mutex in place %d\n",i);
 			return ERROR_CODE;
 		}
 		if (thread_info->ogen_flag_array[i] == 1)			// if ogen is alreay taken 
@@ -35,7 +28,7 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 			ret_val = ReleaseMutex(thread_info->ogen_mutex_array[i]);	//relase mutex
 			if (FALSE == ret_val)
 			{
-				printf("Error when releasing\n");
+				printf("Error when releasing ogen in place %d mutex\n", i);
 				return ERROR_CODE;
 			}
 			continue;										// continue the for loop
@@ -46,17 +39,17 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 			ret_val = ReleaseMutex(thread_info->ogen_mutex_array[i]);	//relase mutex
 			if (FALSE == ret_val)
 			{
-				printf("Error when releasing\n");
+				printf("Error when releasing ogen in place %d mutex\n", i);
 				return ERROR_CODE;
 			}
-			CalcTripelt(i + 1, thread_info->max_number, thread_info); /////////////////////////////////***************
+			CalcTripletPutInBuffer(i + 1, thread_info->max_number, thread_info); /////////////////////////////////***************
 		}
 	}
 
 
 }
 
-int CalcTriplet(int n, int max, thread_container *thread_info)
+int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
 {
 	int a, b, c;
 	for (int m = n + 1; m < max + 1; m++)
@@ -66,7 +59,7 @@ int CalcTriplet(int n, int max, thread_container *thread_info)
 			if (FindGCD(n, m) == 1)
 			{
 				ClaclABC(n, m, &a, &b, &c);
-				PutTripInBuff(n, m, a, b, c, thread_info);          /////////////////////////////////////****************
+				PutInBuffer(n, m, a, b, c, thread_info);
 			}
 			else
 				continue;
@@ -77,9 +70,40 @@ int CalcTriplet(int n, int max, thread_container *thread_info)
 	}
 }
 
-int PutTripInBuff(int n, int m, int a, int b, int c, thread_container *thread_info)
+int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info)
 {
+	DWORD				wait_code_sema;
+	DWORD				wait_code_mutex;
+	BOOL				release_val_sema;
+	int					slot;
 
+	wait_code_sema = WaitForSingleObject(buffer_empty_sem, INFINITE);
+	if (wait_code_sema != WAIT_OBJECT_0)
+	{
+		printf("Error when waiting for buffer empty semaphore\n");
+		return ERROR_CODE;
+	}
+	slot = FindBuffSlot(thread_info);
+	if (slot == -1)		//if the function returned with error
+	{
+		printf("error ocured in FindBuffSlot function\n");
+		return ERROR_CODE;
+	}
+	else				// the function found an empty slot
+	{
+		thread_info->pyth_triple_buffer[slot].a = a;
+		thread_info->pyth_triple_buffer[slot].b = b;
+		thread_info->pyth_triple_buffer[slot].c = c;
+		thread_info->pyth_triple_buffer[slot].n = n;
+		thread_info->pyth_triple_buffer[slot].m = m;
+		release_val_sema = ReleaseSemaphore(buffer_full_sem,1,NULL);
+		if (FALSE == release_val_sema)
+		{
+			printf("failed realising \"buff_full_sema\" semaphore");
+			return ERROR_CODE;
+		}
+		return SUCCESS_CODE;
+	}
 }
 
 int FindGCD(int n, int m)
@@ -99,4 +123,40 @@ void CalcABC(int n, int m, int *a, int *b, int *c)
 	*a = (m*m) - (n*n);
 	*b = 2 * n * m;
 	*c = (m*m) + (n*n);
+}
+
+int FindBuffSlot(thread_container *thread_info)
+{
+	DWORD	wait_code;
+	BOOL	retval;
+	for (int i = 0; i < thread_info->buffer_size; i++)
+	{
+		wait_code = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
+		if (wait_code != WAIT_OBJECT_0)
+		{
+			printf("Error when waiting for buffer mutex in place %d \n", i);
+			return ERROR_CODE;
+		}
+		if (thread_info->pyth_triple_buffer[i].data_flag == 1)					// if buffer slot is full
+		{
+			retval = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex); // release mutex
+			if (FALSE == retval)
+			{
+				printf("Error when releasing buff slot mutex in place %d\n", i);
+				return ERROR_CODE;
+			}
+			continue;   // continue to look for next slot
+		}
+		else		// found empty slot in buffer
+		{
+			thread_info->pyth_triple_buffer[i].data_flag = 1;			 // mark the slot as taken
+			retval = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);  // release mutex
+			if (FALSE == retval)
+			{
+				printf("Error when releasing buff slot mutex in place %d\n", i);
+				return ERROR_CODE;
+			}
+			return i;			// return the index of the slot
+		}
+	}
 }
