@@ -20,5 +20,11 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 
 // Function Declarations -------------------------------------------------------
 
+int FindBuffSlot(thread_container *thread_info);
+void CalcABC(int n, int m, int *a, int *b, int *c);
+int FindGCD(int n, int m);
+int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info);
+int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info);
+DWORD WINAPI PythThreadFunc(LPVOID lpParam);
 
 #endif // 
