@@ -39,10 +39,12 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 			ret_val = ReleaseMutex(thread_info->ogen_mutex_array[i]);	//relase mutex
 			if (FALSE == ret_val)
 			{
-				printf("Error when releasing ogen in place %d mutex\n", i);
+				printf("Error when releasing ogen mutex in place %d\n", i);
 				return ERROR_CODE;
 			}
 			CalcTripletPutInBuffer(i + 1, thread_info->max_number, thread_info); /////////////////////////////////***************
+			if (i == thread_info->max_number - 2)		// if the current thread calculating the last ogen
+				thread_info->last_thread_done = 1;
 		}
 	}
 

@@ -44,7 +44,9 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 			return -1;
 		}
 		ogen_flags[i] = 0;
+		
 	}
+	ogen_flags[max_num - 1] = 1; // mark the last place as calculated because ogen must be < max_num
 
 	// init the buffer valus, flags and mutex
 	for (int i = 0; i < buffer_size; i++) {

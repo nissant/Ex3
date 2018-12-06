@@ -25,7 +25,6 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 HANDLE buffer_full_sem;						// Sempahore handle for buffer. The Producer releases this semaphore (+1)
 HANDLE buffer_empty_sem;					// Sempahore handle for buffer. The Consumer releases this semaphore (+1)
 
-char last_thread_finished = 0;				// The thread that calculates the last ogen, raises this flag (=1)
 
 typedef struct buffer{
 	int a, b, c;							// Pythagorean triple integer
