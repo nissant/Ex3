@@ -192,6 +192,12 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 		return -1;
 	}
 
+	// Create sorting thread
+	if (CreateThreadSimple(sortConsumer, thread_data_ptr, NULL, tmp_thread_handle_ptr) != 0) {
+		return -1;
+	}
+	thread_handles[thread_data_ptr->prod_thread_count - 1] = tmp_thread_handle;
+
 	// Itterate over producing thread count and open threads
 	for (i=0;i<thread_data_ptr->prod_thread_count-1;i++) {
 		// Open new thread and pass thread routine and pointer to data container
@@ -205,14 +211,6 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 		thread_handles[i] = tmp_thread_handle;
 	}
 
-	if (CreateThreadSimple(PythThreadFunc, thread_data_ptr, NULL, tmp_thread_handle_ptr) != 0) {
-		// Thread creation failed - Clean up
-		for (j; j < thread_data_ptr->prod_thread_count; j++) {
-			CloseHandle(thread_handles[j]);
-		}
-		return -1;
-	}
-	thread_handles[thread_data_ptr->prod_thread_count - 1] = tmp_thread_handle;
 	return 0;
 }
 
@@ -234,13 +232,13 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	int t_counter = 0;
 	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
 	if (wait_res == FALSE) {
-		printf("Error when waiting for thread counter mutex\n");
+		printf("Error when waiting for thread counter mutex. Last Error = 0x%x\n", GetLastError());
 		return ERROR_CODE;
 	}
 	t_counter = thread_counter;
 	release_res = ReleaseMutex(thread_counter_mutex);
 	if (release_res == FALSE) {
-		printf("Error when releasing thread counter mutex\n");
+		printf("Error when releasing thread counter mutexLast Error = 0x%x\n", GetLastError());
 		return ERROR_CODE;
 	}
 
