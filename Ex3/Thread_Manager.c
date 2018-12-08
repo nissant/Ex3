@@ -63,7 +63,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 	// Create thread counter mutex
 	thread_counter_mutex = CreateMutex(
 		NULL,   /* default security attributes */
-		FALSE,	/* don't lock mutex immediately */
+		true,	/* don't lock mutex immediately */
 		NULL); /* un-named */
 	if (thread_counter_mutex == NULL) {
 		printf("Encountered error while creating mutex, ending program. Last Error = 0x%x\n", GetLastError());
@@ -228,6 +228,7 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	//BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 	
+	/*
 	// Get producing thread counter
 	int t_counter = 0;
 	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
@@ -238,12 +239,12 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	t_counter = thread_counter;
 	release_res = ReleaseMutex(thread_counter_mutex);
 	if (release_res == FALSE) {
-		printf("Error when releasing thread counter mutexLast Error = 0x%x\n", GetLastError());
+		printf("Error when releasing thread counter mutex. Last Error = 0x%x\n", GetLastError());
 		return ERROR_CODE;
 	}
+	*/
 
-
-	while (t_counter <= thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
+	while (thread_counter <= thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
 		// Consumer thread waits and decraments 'full' semaphore
 		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		
@@ -267,7 +268,7 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 			printf("Error when releasing buffer semaphore!\n");
 			return ERROR_CODE;
 		}
-
+		/*
 		// Update t_counter
 		wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
 		if (release_res == FALSE) {
@@ -280,6 +281,7 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 			printf("Error when releasing thread counter mutex\n");
 			return ERROR_CODE;
 		}
+		*/
 
 	}
 	// At this point all threads have exited successfully after inserting data into buffer
@@ -300,7 +302,7 @@ int clear_buffer(thread_container *thread_info, bool clearall) {
 	int i;
 	DWORD wait_res, release_res;
 
-	for (i; i < thread_info->buffer_size; i++) {
+	for (i=0; i < thread_info->buffer_size; i++) {
 		wait_res = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
 		if (wait_res != WAIT_OBJECT_0) {
 			printf("Error when waiting for buffer entry mutex\n");
