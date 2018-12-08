@@ -29,13 +29,13 @@ HANDLE buffer_empty_sem;					// Sempahore handle for buffer. The Consumer releas
 int thread_counter;							// Finished thread counter
 HANDLE thread_counter_mutex;				// Mutex for thread counter
 
-int pythagorean_triple_counter;				// Number of triples found
-triple *pythagorean_triple_lst;				// This array holds the sorted final Pythagorean triples
-
 typedef struct tri{						
 	int a, b, c;							// Pythagorean triple
 	int m, n;								// Pythagorean triple parameters 
 }triple;
+
+int pythagorean_triple_counter;				// Number of triples found
+triple *pythagorean_triple_lst;				// This array holds the sorted final Pythagorean triples
 
 typedef struct buffer{
 	triple pythagorean; 					// This variable holds the pythagorean triple data
@@ -64,6 +64,7 @@ void cleanThreadContainer(thread_container *thread_data_ptr);
 int clear_buffer(thread_container *thread_info, bool clearall);
 void closeThreadHandles(HANDLE *thread_handles, int thread_count);
 int cmp_function(const void * a, const void * b);
+int CreateThreadSimple(LPTHREAD_START_ROUTINE p_start_routine, thread_container *data, LPDWORD p_thread_id, HANDLE *thread_handle_ptr);
 
 
 #endif

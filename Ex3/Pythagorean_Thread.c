@@ -10,13 +10,14 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 
 DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 {
+	int i;
 	DWORD				wait_code_counter;
 	BOOL				ret_val_counter;
 	DWORD				wait_code;
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;	// Get pointer to relevcant data needed for execution in this thread
 
-	for (int i = 0; i < thread_info->max_number; i++)
+	for (i = 0; i < thread_info->max_number; i++)
 	{
 		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen mutex
 		if (WAIT_OBJECT_0 != wait_code)
@@ -69,14 +70,14 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 
 int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
 {
-	int a, b, c;
-	for (int m = n + 1; m <= max + 1; m++)
+	int a, b, c, m;
+	for (m = n + 1; m <= max + 1; m++)
 	{
 		if (((n % 2 == 0) && (m % 2 == 1)) || ((n % 2 == 1) && (m % 2 == 0))) // if one of the couple (n,m) is odd and other is even
 		{
 			if (FindGCD(n, m) == 1)
 			{
-				ClaclABC(n, m, &a, &b, &c);
+				CalcABC(n, m, &a, &b, &c);
 				if (PutInBuffer(n, m, a, b, c, thread_info)== ERROR_CODE)
 				{
 					return ERROR_CODE;
@@ -157,7 +158,8 @@ int FindBuffSlot(thread_container *thread_info)
 {
 	DWORD	wait_code;
 	BOOL	retval;
-	for (int i = 0; i < thread_info->buffer_size; i++)
+	int i;
+	for (i = 0; i < thread_info->buffer_size; i++)
 	{
 		wait_code = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
 		if (wait_code != WAIT_OBJECT_0)

@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
 		free(thread_handles);
 		exit(EXIT_FAILURE);
 	}
+
 	/*
 	// Check thread exit codes
 	if (checkThreads(thread_handles) != 0) {
