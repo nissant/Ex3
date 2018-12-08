@@ -17,6 +17,7 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;	// Get pointer to relevcant data needed for execution in this thread
 
+	//ReleaseSemaphore(buffer_full_sem, 1, NULL);
 	for (i = 0; i < thread_info->max_number; i++)
 	{
 		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen mutex

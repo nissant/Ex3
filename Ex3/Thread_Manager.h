@@ -64,7 +64,8 @@ void cleanThreadContainer(thread_container *thread_data_ptr);
 int clear_buffer(thread_container *thread_info, bool clearall);
 void closeThreadHandles(HANDLE *thread_handles, int thread_count);
 int cmp_function(const void * a, const void * b);
-int CreateThreadSimple(LPTHREAD_START_ROUTINE p_start_routine, thread_container *data, LPDWORD p_thread_id, HANDLE *thread_handle_ptr);
+int checkArgs(int argc, int num);
+int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_container *thread_data_ptr, char *path);
 
 
 #endif

@@ -53,7 +53,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 		NULL,				/* Default security attributes */
 		0,					/* Initial Count - no slots are full */
 		buffer_size,		/* Maximum Count */
-		NULL); /* un-named */
+		NULL);				/* un-named */
 
 	if (buffer_full_sem == NULL) {
 		printf("Encountered error while creating semaphore, ending program. Last Error = 0x%x\n", GetLastError());
@@ -63,7 +63,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 	// Create thread counter mutex
 	thread_counter_mutex = CreateMutex(
 		NULL,   /* default security attributes */
-		true,	/* don't lock mutex immediately */
+		FALSE,	/* don't lock mutex immediately */
 		NULL); /* un-named */
 	if (thread_counter_mutex == NULL) {
 		printf("Encountered error while creating mutex, ending program. Last Error = 0x%x\n", GetLastError());
@@ -187,28 +187,45 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 	int i, j;
 	HANDLE tmp_thread_handle;
 	HANDLE *tmp_thread_handle_ptr = &tmp_thread_handle;
+	DWORD thread_id;
 
 	if (thread_handles == NULL) {
 		return -1;
 	}
 
-	// Create sorting thread
-	if (CreateThreadSimple(sortConsumer, thread_data_ptr, NULL, tmp_thread_handle_ptr) != 0) {
-		return -1;
-	}
-	thread_handles[thread_data_ptr->prod_thread_count - 1] = tmp_thread_handle;
-
 	// Itterate over producing thread count and open threads
-	for (i=0;i<thread_data_ptr->prod_thread_count-1;i++) {
+	for (i=0;i<thread_data_ptr->prod_thread_count;i++) {
 		// Open new thread and pass thread routine and pointer to data container
-		if (CreateThreadSimple(PythThreadFunc, thread_data_ptr, NULL, tmp_thread_handle_ptr) != 0) {
+		thread_handles[i] = CreateThread(
+			NULL,					/*  default security attributes */
+			0,						/*  use default stack size */
+			PythThreadFunc,			/*  thread function */
+			thread_data_ptr,		/*  argument to thread function */
+			0,						/*  use default creation flags */
+			&thread_id);			/*  returns the thread identifier */
+
+		if (thread_handles[i] == NULL) {
+			printf("Failed to create producing thread number %d!\n",i);
 			// Thread creation failed - Clean up
-			for (j; j < i; j++) {
+			for (j=1; j < i; j++) {
 				CloseHandle(thread_handles[j]);
 			}
+			CloseHandle(thread_handles[0]);
 			return -1;
 		}
-		thread_handles[i] = tmp_thread_handle;
+	}
+	// Create sorting thread
+	thread_handles[thread_data_ptr->prod_thread_count] = CreateThread(
+		NULL,					/*  default security attributes */
+		0,						/*  use default stack size */
+		sortConsumer,			/*  thread function */
+		thread_data_ptr,		/*  argument to thread function */
+		0,						/*  use default creation flags */
+		&thread_id);			/*  returns the thread identifier */
+
+	if (thread_handles[thread_data_ptr->prod_thread_count] == NULL) {
+		printf("Failed to create sort thread!\n");
+		return -1;
 	}
 
 	return 0;
@@ -223,28 +240,30 @@ Parameters	–
 Returns		–
 */
 DWORD WINAPI sortConsumer(LPVOID lpParam) {
-	DWORD				wait_res, release_res;
-	//DWORD				wait_code;
-	//BOOL				ret_val;
+	DWORD				wait_res; 
+	DWORD				release_res;
+	BOOL				ret_val;
+	int					t_counter = 0;
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 	
-	/*
-	// Get producing thread counter
-	int t_counter = 0;
-	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
-	if (wait_res == FALSE) {
-		printf("Error when waiting for thread counter mutex. Last Error = 0x%x\n", GetLastError());
+	
+	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
+	if (WAIT_OBJECT_0 != wait_res)
+	{
+		printf("Error when waiting for global counter mutex\n");
 		return ERROR_CODE;
 	}
+	// critical area - update counter
 	t_counter = thread_counter;
-	release_res = ReleaseMutex(thread_counter_mutex);
-	if (release_res == FALSE) {
-		printf("Error when releasing thread counter mutex. Last Error = 0x%x\n", GetLastError());
+	// finished critical area
+	ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+	if (FALSE == ret_val)
+	{
+		printf("Error when releasing global counter mutex\n");
 		return ERROR_CODE;
 	}
-	*/
 
-	while (thread_counter <= thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
+	while (t_counter < thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
 		// Consumer thread waits and decraments 'full' semaphore
 		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		
@@ -268,22 +287,25 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 			printf("Error when releasing buffer semaphore!\n");
 			return ERROR_CODE;
 		}
-		/*
-		// Update t_counter
-		wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
-		if (release_res == FALSE) {
-			printf("Error when waiting for thread counter mutex\n");
-			return ERROR_CODE;
-		}
-		t_counter = thread_counter;
-		release_res = ReleaseMutex(thread_counter_mutex);
-		if (release_res == FALSE) {
-			printf("Error when releasing thread counter mutex\n");
-			return ERROR_CODE;
-		}
-		*/
 
+		// access to global counter - each thread updates the counter when finishing
+		wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  
+		if (WAIT_OBJECT_0 != wait_res)
+		{
+			printf("Error when waiting for global counter mutex\n");
+			return ERROR_CODE;
+		}
+		// critical area - update counter
+		t_counter = thread_counter;
+		// finished critical area
+		ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+		if (FALSE == ret_val)
+		{
+			printf("Error when releasing global counter mutex\n");
+			return ERROR_CODE;
+		}
 	}
+
 	// At this point all threads have exited successfully after inserting data into buffer
 	clear_buffer(thread_info, true);	// Clear buffer
 	qsort(pythagorean_triple_lst, pythagorean_triple_counter, sizeof(triple), cmp_function);	// Sort the array
@@ -386,49 +408,62 @@ void closeThreadHandles(HANDLE *thread_handles,int thread_count) {
 
 
 /*
-Function CreateThreadSimple
+Function sortConsumer
 ------------------------
-Description – A simplified API for creating threads. This function is just a wrapper for CreateThread.
-Parameters	– p_start_routine: A pointer to the function to be executed by the thread,
-			  test_app *tst_ptr: A pointer to the test being passed to the thread as argument,
-			  p_thread_id: A pointer to a variable that receives the thread identifier,
-*					If this parameter is NULL, the thread identifier is not returned.
-			HANDLE *thread_handle_ptr: A pointer to the handle to the new thread. If the function
-			fails the return value us NULL
-Returns		– 0 for success, -1 for failure
+Description –
+Parameters	–
+Returns		–
 */
-int CreateThreadSimple(LPTHREAD_START_ROUTINE p_start_routine, thread_container *data, LPDWORD p_thread_id, HANDLE *thread_handle_ptr)
-{
-	HANDLE thread_handle = NULL;
-	*thread_handle_ptr = thread_handle;
-
-	if (NULL == p_start_routine)
-	{
-		printf("Received null pointer for thread routine");
-		return -1;
+int checkArgs(int argc, int num) {
+	if (argc < num+1) {
+		printf("Not enough input arguments, couldn't complete the task!\n");
 	}
 
-
-	if (NULL == data)
-	{
-		printf("Received null pointer for routine argument");
-		return -1;
+	else if (argc > num+1) {
+		printf("Too many input arguments, couldn't complete the task!\n");
 	}
-
-	thread_handle = CreateThread(
-		NULL,            /*  default security attributes */
-		0,               /*  use default stack size */
-		p_start_routine, /*  thread function */
-		data,			 /*  argument to thread function */
-		0,               /*  use default creation flags */
-		p_thread_id);    /*  returns the thread identifier */
-
-	if (NULL == thread_handle)
-	{
-		printf("Couldn't create thread\n");
-		return -1;
-	}
-
-	*thread_handle_ptr = thread_handle;
 	return 0;
 }
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_container *thread_data_ptr, char *path) {
+	DWORD ExitCode;
+	DWORD *lpExitCode = &ExitCode;
+	int i;
+	int errFlag=0;
+	// Itterate over test list and check thread exit codes
+	for (i = 0; i < thread_count;i++) {
+		if (GetExitCodeThread(thread_handles[i], lpExitCode)) {
+			if (ExitCode != 0) {
+				if (i==0)
+					printf("Error in sorting thread execution! Exit code = 0x%x\n", ExitCode);
+				else
+					printf("Error in calculation thread %d execution! Exit code = 0x%x\n", i, ExitCode);
+				errFlag++;
+			}
+		}
+	}
+	if (errFlag != 0)
+		return -1;
+
+	FILE *fp_results = fopen(path, "w");
+	if (fp_results == NULL)							// Handle errors
+	{
+		printf("Error when opening output file stream!\n");
+		return (-1);
+	}
+
+	for (i = 0; i < pythagorean_triple_counter;i++) {
+		fprintf(fp_results, "%d,%d,%d\n", pythagorean_triple_lst[i].a, pythagorean_triple_lst[i].b, pythagorean_triple_lst[i].c);
+	}
+	fclose(fp_results);
+	return 0;
+}
+

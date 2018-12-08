@@ -11,13 +11,7 @@ Description		- This program finds Pythagorean triples using thread "parallelism"
 int main(int argc, char *argv[]) {
 	DWORD wait_code;
 	// Check that exactly 4 cmd line args are present, cmd line format: ex3.exe <MAX_NUMBER> <NUM_OF_COMPUTATION_THREADS> <OUTPUT_BUFFER_SIZE> <OUTPUT_FILE>
-	if (argc < 5) {
-		printf("Not enough input arguments, couldn't complete the task!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (argc > 5) {
-		printf("Too many input arguments, couldn't complete the task!\n");
+	if (checkArgs(argc, 4) != 0) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -50,15 +44,14 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	/*
-	// Check thread exit codes
-	if (checkThreads(thread_handles) != 0) {
+	// Check thread exit codes and print output file if successful
+	if (checkThreadsAndPrint(thread_handles, thread_num, thread_data_ptr, argv[4]) != 0) {
 		cleanThreadContainer(thread_data_ptr);
 		closeThreadHandles(thread_handles, thread_num);
 		free(thread_handles);
 		exit(EXIT_FAILURE);
 	}
-	*/
+
 	// At this point all threads have finished and results file created successfully in path 
 	cleanThreadContainer(thread_data_ptr);				// Close Container handles and free allocated memory
 	closeThreadHandles(thread_handles, thread_num);		// Close thread handles
