@@ -62,6 +62,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr);
 int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread_handles);
 void cleanThreadContainer(thread_container *thread_data_ptr);
 int clear_buffer(thread_container *thread_info, bool clearall);
+bool isDataInbuffer(thread_container *thread_info);
 void closeThreadHandles(HANDLE *thread_handles, int thread_count);
 int cmp_function(const void * a, const void * b);
 int checkArgs(int argc, int num);

@@ -245,9 +245,9 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	BOOL				ret_val;
 	int					t_counter = 0;
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
+	bool				keepGoing = TRUE;
 	
-	
-	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
+	wait_res = WaitForSingleObject(thread_info->ogen_mutex_array[thread_info->max_number-2], INFINITE);  // access to global counter - each thread updates the counter when finishing
 	if (WAIT_OBJECT_0 != wait_res)
 	{
 		printf("Error when waiting for global counter mutex\n");
@@ -265,13 +265,19 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 
 	while (t_counter < thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
-		// Consumer thread waits and decraments 'full' semaphore
-		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		
-		if (wait_res != WAIT_OBJECT_0) {
-			printf("Error when waiting for buffer semaphore!\n");
-			return ERROR_CODE;
+		
+		if (isDataInbuffer(thread_info)) { 
+			// Consumer thread waits and decraments 'full' semaphore - It's consumption time!
+			wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);
+			if (wait_res != WAIT_OBJECT_0) {
+				printf("Error when waiting for buffer semaphore!\n");
+				return ERROR_CODE;
+			}
 		}
-
+		else {	// No data in buffer
+			continue;
+		}
+		
 		// Clear one entry from buffer
 		if (clear_buffer(thread_info, false) != 0) {
 			printf("Error when clearing buffer!\n");
@@ -360,6 +366,45 @@ int clear_buffer(thread_container *thread_info, bool clearall) {
 	}
 
 	return SUCCESS_CODE;
+}
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+bool isDataInbuffer(thread_container *thread_info) {
+	int i;
+	DWORD wait_res, release_res;
+
+	for (i = 0; i < thread_info->buffer_size; i++) {
+		wait_res = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
+		if (wait_res != WAIT_OBJECT_0) {
+			printf("Error when waiting for buffer entry mutex\n");
+			return ERROR_CODE;
+		}
+		if (thread_info->pyth_triple_buffer[i].data_flag == 1) {			// Found data availabe in buffer entry
+			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
+			if (release_res == FALSE) {
+				printf("Error when releasing buffer entry mutex\n");
+				return ERROR_CODE;
+			}
+			return true;
+		}
+		else{
+			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
+			if (release_res == FALSE) {
+				printf("Error when releasing buffer entry mutex\n");
+				return ERROR_CODE;
+			}
+			continue;
+		}
+	}
+	// No data found in buffer
+	return false;
 }
 
 
