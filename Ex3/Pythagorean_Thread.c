@@ -10,7 +10,8 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 
 DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 {
-
+	DWORD				wait_code_counter;
+	BOOL				ret_val_counter;
 	DWORD				wait_code;
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;	// Get pointer to relevcant data needed for execution in this thread
@@ -35,7 +36,7 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 		}
 		else 		// ogen is not taken. need to calculate triplet
 		{
-			thread_info->ogen_flag_array[i] = 1;
+			thread_info->ogen_flag_array[i] = 1;			// mark ogen as calculated
 			ret_val = ReleaseMutex(thread_info->ogen_mutex_array[i]);	//relase mutex
 			if (FALSE == ret_val)
 			{
@@ -46,13 +47,24 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 			{
 				return ERROR_CODE;
 			}
-			if (i == thread_info->max_number - 2)		// if the current thread calculating the last ogen
-				thread_info->last_thread_done = 1;
-
+			wait_code_counter = WaitForSingleObject(thread_counter_mutex, INFINITE);
+			if (WAIT_OBJECT_0 != wait_code_counter)
+			{
+				printf("Error when waiting for global counter mutex\n");
+				return ERROR_CODE;
+			}
+			// critical area - update counter
+			thread_counter++;	
+			// finished critical area
+			ret_val_counter = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+			if (FALSE == ret_val)
+			{
+				printf("Error when releasing global counter mutex\n");
+				return ERROR_CODE;
+			}
 		}
 	}
-
-
+	return SUCCESS_CODE;
 }
 
 int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
@@ -101,11 +113,11 @@ int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info
 
 	else				// the function found an empty slot
 	{
-		thread_info->pyth_triple_buffer[slot].a = a;
-		thread_info->pyth_triple_buffer[slot].b = b;
-		thread_info->pyth_triple_buffer[slot].c = c;
-		thread_info->pyth_triple_buffer[slot].n = n;
-		thread_info->pyth_triple_buffer[slot].m = m;
+		thread_info->pyth_triple_buffer[slot].pythagorean.a = a;
+		thread_info->pyth_triple_buffer[slot].pythagorean.b = b;
+		thread_info->pyth_triple_buffer[slot].pythagorean.c = c;
+		thread_info->pyth_triple_buffer[slot].pythagorean.n = n;
+		thread_info->pyth_triple_buffer[slot].pythagorean.m = m;
 		release_val_mutex = ReleaseMutex(thread_info->pyth_triple_buffer[slot].data_mutex);  // release mutex (the mutex is taken in FindBuffSlot func)
 		if (FALSE == release_val_mutex)
 		{
