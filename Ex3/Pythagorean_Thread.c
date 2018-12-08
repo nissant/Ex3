@@ -47,22 +47,22 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 			{
 				return ERROR_CODE;
 			}
-			wait_code_counter = WaitForSingleObject(thread_counter_mutex, INFINITE);
-			if (WAIT_OBJECT_0 != wait_code_counter)
-			{
-				printf("Error when waiting for global counter mutex\n");
-				return ERROR_CODE;
-			}
-			// critical area - update counter
-			thread_counter++;	
-			// finished critical area
-			ret_val_counter = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-			if (FALSE == ret_val)
-			{
-				printf("Error when releasing global counter mutex\n");
-				return ERROR_CODE;
-			}
 		}
+	}
+	wait_code_counter = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
+	if (WAIT_OBJECT_0 != wait_code_counter)
+	{
+		printf("Error when waiting for global counter mutex\n");
+		return ERROR_CODE;
+	}
+	// critical area - update counter
+	thread_counter++;
+	// finished critical area
+	ret_val_counter = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+	if (FALSE == ret_val)
+	{
+		printf("Error when releasing global counter mutex\n");
+		return ERROR_CODE;
 	}
 	return SUCCESS_CODE;
 }
