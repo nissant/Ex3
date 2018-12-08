@@ -30,7 +30,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 
 	if (buffer == NULL || ogen_flags == NULL || ogen_mutex == NULL) {
 
-		return -1;
+		return ERROR_CODE;
 	}
 	
 	// init the ogen mutex and flags
@@ -41,7 +41,7 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 		NULL); /* un-named */
 		if (ogen_mutex[i] == NULL) {
 			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
-			return -1;
+			return ERROR_CODE;
 		}
 		ogen_flags[i] = 0;
 		
@@ -56,26 +56,29 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 			NULL); /* un-named */
 		if (buffer[i].data_mutex == NULL) {
 			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
-			return -1;
+			return ERROR_CODE;
 		}
 		buffer[i].data_flag = 0;
-		buffer[i].a = 0;
-		buffer[i].b = 0;
-		buffer[i].c = 0;
-		buffer[i].m = 0;
-		buffer[i].n = 0;
+		buffer[i].pythagorean.a = 0;
+		buffer[i].pythagorean.b = 0;
+		buffer[i].pythagorean.c = 0;
+		buffer[i].pythagorean.m = 0;
+		buffer[i].pythagorean.n = 0;
 	}
 	
 	// Load data to container
-	thread_data_ptr->out_path = argv[4];
-	thread_data_ptr->last_thread_done = 0;
+
+	thread_data_ptr->prod_thread_count = argv[2];
 	thread_data_ptr->buffer_size = buffer_size;
 	thread_data_ptr->max_number = max_num;
 	thread_data_ptr->ogen_flag_array = ogen_flags;
 	thread_data_ptr->pyth_triple_buffer = buffer;
 	thread_data_ptr->ogen_mutex_array = ogen_mutex;
 
-	return 0;
+	// Reset list counter
+	pythagorean_triple_counter = 0;
+
+	return SUCCESS_CODE;
 }
 
 
@@ -105,6 +108,7 @@ void freeThreadContainer(thread_container *thread_data_ptr) {
 }
 
 
+
 /*
 Function sortConsumer
 ------------------------
@@ -113,40 +117,119 @@ Parameters	–
 Returns		–
 */
 DWORD WINAPI sortConsumer(LPVOID lpParam) {
-	DWORD				wait_res;
+	DWORD				wait_res, release_res;
 	DWORD				wait_code;
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 
-	while (thread_info->last_thread_done == 0 )				//	While last thread hasn't finished passing it's last data entries to buffer
+	while (thread_counter<=thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
-		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);
+		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		// decrament full semaphore
 		if (wait_res != WAIT_OBJECT_0) {
-			printf("Error when waiting for ogen mutex in place %d\n", i);
+			printf("Error when waiting for buffer semaphore!\n");
 			return ERROR_CODE;
 		}
 
-		wait_res = WaitForSingleObject(mutex, INFINITE);
-		if (wait_res != WAIT_OBJECT_0) ReportErrorAndEndProgram();
-
 		/* Start Critical Section */
 
-		item = remove_item(items);
+		if (clear_buffer(thread_info, false) != 0) {
+			printf("Error when clearing buffer!\n");
+			return ERROR_CODE;
+		}
 
 		/* End Critical Section */
 
-		release_res = ReleaseMutex(mutex);
-		if (release_res == FALSE) ReportErrorAndEndProgram();
+		release_res = ReleaseSemaphore(									// incrament empty semaphore
+			buffer_empty_sem,											// lReleasecount
+			1, 															// Signal that exactly one cell was emptied
+			NULL);														// lpPreviouscount
+		if (release_res == FALSE) {
+			printf("Error when releasing buffer semaphore!\n");
+			return ERROR_CODE;
+		}
 
-		release_res = ReleaseSemaphore(
-			empty,
-			1, 		/* Signal that exactly one cell was emptied */
-			&previous_count);
-		if (release_res == FALSE) ReportErrorAndEndProgram();
-
-		consume_item(item);
-		printf("Consumer used one item. Previous count is: %ld\n", previous_count);
 	}
- 
+	// At this point all threads have exited successfully after inserting data to buffer
+	clear_buffer(thread_info, true); 
+	qsort(pythagorean_triple_lst, pythagorean_triple_counter, sizeof(triple), cmp_function);
+	return SUCCESS_CODE;
+}
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+int clear_buffer(thread_container *thread_info, bool clearall) {
+	DWORD wait_res, release_res;
+
+	for (int i; i < thread_info->buffer_size; i++) {
+		wait_res = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
+		if (wait_res != WAIT_OBJECT_0) {
+			printf("Error when waiting for buffer entry mutex\n");
+			return ERROR_CODE;
+		}
+		if (thread_info->pyth_triple_buffer[i].data_flag == 0) {			// No new data availabe in buffer entry
+			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
+			if (release_res == FALSE) {
+				printf("Error when releasing buffer entry mutex\n");
+				return ERROR_CODE;
+			}
+			continue;
+		}
+		else {																// Found new data in buffer 
+			pythagorean_triple_counter++;
+			pythagorean_triple_lst = realloc(pythagorean_triple_lst, pythagorean_triple_counter * sizeof(triple));
+			if (pythagorean_triple_lst == NULL) {
+				printf("Realloc failed!\n");
+				return ERROR_CODE;
+			}
+			pythagorean_triple_lst[pythagorean_triple_counter - 1] = thread_info->pyth_triple_buffer[i].pythagorean;
+			thread_info->pyth_triple_buffer[i].data_flag = 0;				// Reset data flag
+			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
+			if (release_res == FALSE) {
+				printf("Error when releasing buffer entry mutex\n");
+				return ERROR_CODE;
+			}
+			if (clearall == false) {
+				return SUCCESS_CODE;
+			}
+				
+		}
+	}
+
+	return SUCCESS_CODE;
+}
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+int cmp_function(const void * a, const void * b) {
+	triple *firstTriple = (triple*)a;
+	triple *secondTriple = (triple*)b;
+
+	if (firstTriple->n > secondTriple->n) {
+		return 1;
+	}
+	else if (firstTriple->n < secondTriple->n) {
+		return -1;
+	}
+	else {		// Their n is equal
+		if (firstTriple->m > secondTriple->m) {
+			return 1;
+		}
+		else if (firstTriple->m < secondTriple->m) {
+			return -1;
+		}
+	}
 	return 0;
+
 }

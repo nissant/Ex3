@@ -2,7 +2,7 @@
 /*
 Authors			- Eli Slavutsky (308882992) & Nisan Tagar (302344031)
 Project Name	- Ex3
-Description		- This program finds Pythagorean triplets using thread "parallelism", the triplets are sorted (using n,m comperator) and printed to output file
+Description		- This program finds Pythagorean triples using thread "parallelism", the triplets are sorted (using n,m comperator) and printed to output file
 				- This module contains main routines and the sorting thread routine
 */
 
@@ -18,17 +18,27 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 #ifndef THREAD_MANAGER_H
 #define THREAD_MANAGER_H
 
-// Constants -------------------------------------------------------------------
+// Defines ---------------------------------------------------------------------
+#define ERROR_CODE -1
+#define SUCCESS_CODE 0
 
-// Variables -------------------------------------------------------------------
-
+// Global Variables ------------------------------------------------------------
 HANDLE buffer_full_sem;						// Sempahore handle for buffer. The Producer releases this semaphore (+1)
 HANDLE buffer_empty_sem;					// Sempahore handle for buffer. The Consumer releases this semaphore (+1)
 
+int thread_counter;							// Finished thread counter
+HANDLE thread_counter_mutex;				// Mutex for thread counter
+
+int pythagorean_triple_counter;				// Number of triples found
+triple *pythagorean_triple_lst;				// This array holds the sorted final Pythagorean triples
+
+typedef struct tri{						
+	int a, b, c;							// Pythagorean triple
+	int m, n;								// Pythagorean triple parameters 
+}triple;
 
 typedef struct buffer{
-	int a, b, c;							// Pythagorean triple integer
-	int m, n;								// Pythagorean triplet parameters 
+	triple pythagorean; 					// This variable holds the pythagorean triple data
 	char data_flag;							// Flag that signals if data is available in the corresponding index 
 	HANDLE data_mutex;						// Mutex that protects the data in cell
 } data_buffer;
@@ -41,8 +51,7 @@ typedef struct container{
 	char *ogen_flag_array;					// Pointer to array of flags for each ogen
 	int max_number;							// Max number for the ogen
 
-	char *out_path;							// Path to output file
-	char last_thread_done;					// Signaled when last thread has finished the last ogen calculation
+	int prod_thread_count;					// Number of producing threads 
 
 } thread_container;
 
@@ -51,5 +60,8 @@ typedef struct container{
 DWORD WINAPI sortConsumer(LPVOID lpParam);
 int initThreadContainer(char **argv, thread_container *thread_data_ptr);
 void freeThreadContainer(thread_container *thread_data_ptr);
+int clear_buffer(thread_container *thread_info, bool clearall);
+int cmp_function(const void * a, const void * b);
+
 
 #endif

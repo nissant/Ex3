@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	
+
 	// Run all threads & and create producer consumer semaphores
 	int thread_num = atoi(argv[2]);
 	HANDLE *thread_handles = NULL;											
