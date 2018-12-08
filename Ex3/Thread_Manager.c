@@ -8,12 +8,13 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 
 // Includes --------------------------------------------------------------------
 #include "Thread_Manager.h"
+#include "Pythagorean_Thread.h"
 
 
 // Function Definitions -------------------------------------------------------
 
 /*
-Function freeThreadContainer
+Function cleanThreadContainer
 ------------------------
 Description –
 Parameters	–
@@ -24,29 +25,69 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 	int max_num = atoi(argv[1]);
 	int buffer_size = atoi(argv[3]);
 
+	// Allocate ogen,flags and buffer arrays 
 	data_buffer *buffer = (data_buffer*)malloc(sizeof(data_buffer)*buffer_size);
 	char *ogen_flags = (char*)malloc(sizeof(char)*max_num);
 	HANDLE *ogen_mutex = (HANDLE*)malloc(sizeof(HANDLE)*max_num);
 
 	if (buffer == NULL || ogen_flags == NULL || ogen_mutex == NULL) {
+		printf("Memory allocation failed!\n");
+		goto Mem_Clean;
+	}
 
-		return ERROR_CODE;
+	// Create buffer semaphore
+
+	buffer_empty_sem = CreateSemaphore(
+		NULL,				/* Default security attributes */
+		buffer_size,		/* Initial Count - all slots are empty */
+		buffer_size,		/* Maximum Count */
+		NULL);				/* un-named */
+
+	if (buffer_empty_sem == NULL) {
+		printf("Encountered error while creating semaphore, ending program. Last Error = 0x%x\n", GetLastError());
+		goto Mem_Clean;
+	}
+
+	buffer_full_sem = CreateSemaphore(
+		NULL,				/* Default security attributes */
+		0,					/* Initial Count - no slots are full */
+		buffer_size,		/* Maximum Count */
+		NULL); /* un-named */
+
+	if (buffer_full_sem == NULL) {
+		printf("Encountered error while creating semaphore, ending program. Last Error = 0x%x\n", GetLastError());
+		goto Mem_Clean;
 	}
 	
+	// Create thread counter mutex
+	thread_counter_mutex = CreateMutex(
+		NULL,   /* default security attributes */
+		FALSE,	/* don't lock mutex immediately */
+		NULL); /* un-named */
+	if (thread_counter_mutex == NULL) {
+		printf("Encountered error while creating mutex, ending program. Last Error = 0x%x\n", GetLastError());
+		goto Mem_Clean;
+	}
+	
+
 	// init the ogen mutex and flags
 	for (int i = 0; i < max_num; i++) {
 		ogen_mutex[i] = CreateMutex(
 		NULL,   /* default security attributes */
 		FALSE,	/* don't lock mutex immediately */
 		NULL); /* un-named */
-		if (ogen_mutex[i] == NULL) {
-			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
-			return ERROR_CODE;
+		if (ogen_mutex[i] == NULL) {			// Handle error
+			// Clean Up
+			for (int j = 0; j < i; j++) {
+				closeHandle(ogen_mutex[j]);
+			}
+			closeHandle(thread_counter_mutex);
+			printf("Encountered error while creating mutex, ending program. Last Error = 0x%x\n", GetLastError());
+			goto Mem_Clean;
 		}
 		ogen_flags[i] = 0;
 		
 	}
-	ogen_flags[max_num - 1] = 1; // mark the last place as calculated because ogen must be < max_num
 
 	// init the buffer valus, flags and mutex
 	for (int i = 0; i < buffer_size; i++) {
@@ -54,10 +95,19 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 			NULL,   /* default security attributes */
 			FALSE,	/* don't lock mutex immediately */
 			NULL); /* un-named */
-		if (buffer[i].data_mutex == NULL) {
-			printf("Encountered error, ending program. Last Error = 0x%x\n", GetLastError());
-			return ERROR_CODE;
+		if (buffer[i].data_mutex == NULL) {		// Handle error
+			// Clean Up
+			for (int j = 0; j < max_num; j++) {
+				closeHandle(ogen_mutex[j]);
+			}
+			for (int j = 0; j < i; j++) {
+				closeHandle(buffer[j].data_mutex);
+			}
+			closeHandle(thread_counter_mutex);
+			printf("Encountered error while creating mutex, ending program. Last Error = 0x%x\n", GetLastError());
+			goto Mem_Clean;
 		}
+		// init buffer entries
 		buffer[i].data_flag = 0;
 		buffer[i].pythagorean.a = 0;
 		buffer[i].pythagorean.b = 0;
@@ -66,6 +116,8 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 		buffer[i].pythagorean.n = 0;
 	}
 	
+	ogen_flags[max_num - 1] = 1; // mark the last place as calculated because ogen must be < max_num
+
 	// Load data to container
 
 	thread_data_ptr->prod_thread_count = argv[2];
@@ -74,23 +126,37 @@ int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 	thread_data_ptr->ogen_flag_array = ogen_flags;
 	thread_data_ptr->pyth_triple_buffer = buffer;
 	thread_data_ptr->ogen_mutex_array = ogen_mutex;
+	
 
 	// Reset list counter
 	pythagorean_triple_counter = 0;
 
 	return SUCCESS_CODE;
+
+Mem_Clean:
+	free(buffer);
+	free(ogen_flags);
+	free(ogen_mutex);
+	return ERROR_CODE;
 }
 
 
 /*
-Function freeThreadContainer
+Function cleanThreadContainer
 ------------------------
 Description – 
 Parameters	– 
 Returns		– None
 */
-void freeThreadContainer(thread_container *thread_data_ptr) {
+void cleanThreadContainer(thread_container *thread_data_ptr) {
 
+	// Close buffer semaphores
+	closeHandle(buffer_empty_sem);
+	closeHandle(buffer_full_sem);
+	
+	// Close thread counter mutex handle
+	closeHandle(thread_counter_mutex);
+	
 	// Close ogen mutex handles
 	for (int i = 0; i < thread_data_ptr->max_number; i++) {
 		CloseHandle(thread_data_ptr->ogen_mutex_array[i]);
@@ -101,12 +167,49 @@ void freeThreadContainer(thread_container *thread_data_ptr) {
 		CloseHandle(thread_data_ptr->pyth_triple_buffer[i].data_mutex);
 	}
 
-	// Free the 3 dynamic allocations
+	// Free the 4 dynamic allocations
 	free(thread_data_ptr->ogen_mutex_array);
 	free(thread_data_ptr->pyth_triple_buffer);
 	free(thread_data_ptr->ogen_flag_array);
+	free(pythagorean_triple_lst);
 }
 
+
+/*
+Function runProducerConsumerThreads
+------------------------
+Description – The function opens the tests threads and returns a list of thread handles
+Parameters	– *test_list_ptr pointer to test list, *thread_handles pointer to array of list handles
+Returns		– 0 for success, -1 for failure
+*/
+int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread_handles) {
+
+	if (thread_handles == NULL) {
+		return -1;
+	}
+
+	// Itterate over producing thread count and open threads
+	for (int i=0;i<thread_data_ptr->prod_thread_count-1;i++) {
+		// Open new thread and pass thread routine and pointer to data container
+		if (CreateThreadSimple(PythThreadFunc, thread_data_ptr, NULL, thread_handles[i]) != 0) {
+			// Thread creation failed - Clean up
+			for (int j; j < i; j++) {
+				closeHandle(thread_handles[j]);
+			}
+			return -1;
+		}
+	}
+
+	if (CreateThreadSimple(PythThreadFunc, thread_data_ptr, NULL, thread_handles[thread_data_ptr->prod_thread_count-1]) != 0) {
+		// Thread creation failed - Clean up
+		for (int j; j < thread_data_ptr->prod_thread_count; j++) {
+			closeHandle(thread_handles[j]);
+		}
+		return -1;
+	}
+
+	return 0;
+}
 
 
 /*
@@ -121,24 +224,38 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	DWORD				wait_code;
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
+	
+	// Get producing thread counter
+	int t_counter = 0;
+	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
+	if (release_res == FALSE) {
+		printf("Error when waiting for thread counter mutex\n");
+		return ERROR_CODE;
+	}
+	t_counter = thread_counter;
+	release_res = ReleaseMutex(thread_counter_mutex);
+	if (release_res == FALSE) {
+		printf("Error when releasing thread counter mutex\n");
+		return ERROR_CODE;
+	}
 
-	while (thread_counter<=thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
+
+	while (t_counter <= thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
-		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		// decrament full semaphore
+		// Consumer thread waits and decraments 'full' semaphore
+		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);		
 		if (wait_res != WAIT_OBJECT_0) {
 			printf("Error when waiting for buffer semaphore!\n");
 			return ERROR_CODE;
 		}
 
-		/* Start Critical Section */
-
+		// Clear one entry from buffer
 		if (clear_buffer(thread_info, false) != 0) {
 			printf("Error when clearing buffer!\n");
 			return ERROR_CODE;
 		}
 
-		/* End Critical Section */
-
+		// Consumer thread incrament 'empty' semaphore
 		release_res = ReleaseSemaphore(									// incrament empty semaphore
 			buffer_empty_sem,											// lReleasecount
 			1, 															// Signal that exactly one cell was emptied
@@ -148,10 +265,23 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 			return ERROR_CODE;
 		}
 
+		// Update t_counter
+		wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);
+		if (release_res == FALSE) {
+			printf("Error when waiting for thread counter mutex\n");
+			return ERROR_CODE;
+		}
+		t_counter = thread_counter;
+		release_res = ReleaseMutex(thread_counter_mutex);
+		if (release_res == FALSE) {
+			printf("Error when releasing thread counter mutex\n");
+			return ERROR_CODE;
+		}
+
 	}
-	// At this point all threads have exited successfully after inserting data to buffer
-	clear_buffer(thread_info, true); 
-	qsort(pythagorean_triple_lst, pythagorean_triple_counter, sizeof(triple), cmp_function);
+	// At this point all threads have exited successfully after inserting data into buffer
+	clear_buffer(thread_info, true);	// Clear buffer
+	qsort(pythagorean_triple_lst, pythagorean_triple_counter, sizeof(triple), cmp_function);	// Sort the array
 	return SUCCESS_CODE;
 }
 
@@ -232,4 +362,18 @@ int cmp_function(const void * a, const void * b) {
 	}
 	return 0;
 
+}
+
+
+/*
+Function sortConsumer
+------------------------
+Description –
+Parameters	–
+Returns		–
+*/
+void closeThreadHandles(HANDLE *thread_handles,int thread_count) {
+	for (int i = 0; i < thread_count; i++) {
+		closeHandle(thread_handles[i]);
+	}
 }
