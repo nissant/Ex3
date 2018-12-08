@@ -113,40 +113,40 @@ Parameters	–
 Returns		–
 */
 DWORD WINAPI sortConsumer(LPVOID lpParam) {
-	/*
-	DWORD wait_res;
-	BOOL release_res;
-	LONG previous_count;
+	DWORD				wait_res;
+	DWORD				wait_code;
+	BOOL				ret_val;
+	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 
-	while (TRUE)
+	while (thread_info->last_thread_done == 0 )				//	While last thread hasn't finished passing it's last data entries to buffer
 	{
-		//  Sleep for the purposes of the demonstration 
-		Sleep(PRODUCER_WAIT_TIME_IN_MILISECONDS);
-
-		produce_item();
-
-		wait_res = WaitForSingleObject(empty, INFINITE);
-		if (wait_res != WAIT_OBJECT_0) ReportErrorAndEndProgram();
+		wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);
+		if (wait_res != WAIT_OBJECT_0) {
+			printf("Error when waiting for ogen mutex in place %d\n", i);
+			return ERROR_CODE;
+		}
 
 		wait_res = WaitForSingleObject(mutex, INFINITE);
 		if (wait_res != WAIT_OBJECT_0) ReportErrorAndEndProgram();
 
-		// Start Critical Section 
+		/* Start Critical Section */
 
-		insert_item(items);
+		item = remove_item(items);
 
-		///End Critical Section 
+		/* End Critical Section */
 
 		release_res = ReleaseMutex(mutex);
 		if (release_res == FALSE) ReportErrorAndEndProgram();
 
 		release_res = ReleaseSemaphore(
-			full,
-			1, 		//  Signal that exactly one cell was filled 
+			empty,
+			1, 		/* Signal that exactly one cell was emptied */
 			&previous_count);
 		if (release_res == FALSE) ReportErrorAndEndProgram();
-		printf("Producer inserted one item. Previous count is: %ld\n", previous_count);
+
+		consume_item(item);
+		printf("Consumer used one item. Previous count is: %ld\n", previous_count);
 	}
-	*/
+ 
 	return 0;
 }
