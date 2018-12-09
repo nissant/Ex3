@@ -72,7 +72,7 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
 {
 	int a, b, c, m;
-	for (m = n + 1; m <= max + 1; m++)
+	for (m = n + 1; m <= max; m++)
 	{
 		if (((n % 2 == 0) && (m % 2 == 1)) || ((n % 2 == 1) && (m % 2 == 0))) // if one of the couple (n,m) is odd and other is even
 		{
