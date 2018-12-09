@@ -247,23 +247,23 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 	bool				keepGoing = TRUE;
 	
-	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
-	if (WAIT_OBJECT_0 != wait_res)
-	{
-		printf("Error when waiting for global counter mutex\n");
-		return ERROR_CODE;
-	}
+	//wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
+	//if (WAIT_OBJECT_0 != wait_res)
+	//{
+	//	printf("Error when waiting for global counter mutex\n");
+	//	return ERROR_CODE;
+	//}
 	// critical area - update counter
-	t_counter = thread_counter;
+	//t_counter = thread_counter;
 	// finished critical area
-	ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-	if (FALSE == ret_val)
-	{
-		printf("Error when releasing global counter mutex\n");
-		return ERROR_CODE;
-	}
+	//ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+	//if (FALSE == ret_val)
+	//{
+	//	printf("Error when releasing global counter mutex\n");
+	//	return ERROR_CODE;
+	//}
 
-	while (t_counter < thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
+	while (thread_counter < thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
 		
 		if (isDataInbuffer(thread_info)) { 
@@ -297,19 +297,19 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 		// access to global counter - each thread updates the counter when finishing
 		//wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  
 		//if (WAIT_OBJECT_0 != wait_res)
-	//	{
-	//		printf("Error when waiting for global counter mutex\n");
-	//		return ERROR_CODE;
-	//	}
+		//{
+		//	printf("Error when waiting for global counter mutex\n");
+		//	return ERROR_CODE;
+		//}
 		// critical area - update counter
-		t_counter = thread_counter;
+		//t_counter = thread_counter;
 		// finished critical area
-	//	ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-	//	if (FALSE == ret_val)
-	//	{
-	//		printf("Error when releasing global counter mutex\n");
-	//		return ERROR_CODE;
-	//	}
+		//ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+		//if (FALSE == ret_val)
+		//{
+		//	printf("Error when releasing global counter mutex\n");
+		//	return ERROR_CODE;
+		//}
 	}
 
 	// At this point all threads have exited successfully after inserting data into buffer
