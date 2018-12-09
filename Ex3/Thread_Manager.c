@@ -295,21 +295,21 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 		}
 
 		// access to global counter - each thread updates the counter when finishing
-		wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  
-		if (WAIT_OBJECT_0 != wait_res)
-		{
-			printf("Error when waiting for global counter mutex\n");
-			return ERROR_CODE;
-		}
+		//wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  
+		//if (WAIT_OBJECT_0 != wait_res)
+	//	{
+	//		printf("Error when waiting for global counter mutex\n");
+	//		return ERROR_CODE;
+	//	}
 		// critical area - update counter
 		t_counter = thread_counter;
 		// finished critical area
-		ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-		if (FALSE == ret_val)
-		{
-			printf("Error when releasing global counter mutex\n");
-			return ERROR_CODE;
-		}
+	//	ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
+	//	if (FALSE == ret_val)
+	//	{
+	//		printf("Error when releasing global counter mutex\n");
+	//		return ERROR_CODE;
+	//	}
 	}
 
 	// At this point all threads have exited successfully after inserting data into buffer
@@ -381,25 +381,10 @@ bool isDataInbuffer(thread_container *thread_info) {
 	DWORD wait_res, release_res;
 
 	for (i = 0; i < thread_info->buffer_size; i++) {
-		wait_res = WaitForSingleObject(thread_info->pyth_triple_buffer[i].data_mutex, INFINITE);
-		if (wait_res != WAIT_OBJECT_0) {
-			printf("Error when waiting for buffer entry mutex\n");
-			return ERROR_CODE;
-		}
 		if (thread_info->pyth_triple_buffer[i].data_flag == 1) {			// Found data availabe in buffer entry
-			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
-			if (release_res == FALSE) {
-				printf("Error when releasing buffer entry mutex\n");
-				return ERROR_CODE;
-			}
 			return true;
 		}
 		else{
-			release_res = ReleaseMutex(thread_info->pyth_triple_buffer[i].data_mutex);
-			if (release_res == FALSE) {
-				printf("Error when releasing buffer entry mutex\n");
-				return ERROR_CODE;
-			}
 			continue;
 		}
 	}
@@ -487,7 +472,7 @@ int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_contai
 	for (i = 0; i < thread_count;i++) {
 		if (GetExitCodeThread(thread_handles[i], lpExitCode)) {
 			if (ExitCode != 0) {
-				if (i==0)
+				if (i == thread_count-1)
 					printf("Error in sorting thread execution! Exit code = 0x%x\n", ExitCode);
 				else
 					printf("Error in calculation thread %d execution! Exit code = 0x%x\n", i, ExitCode);
