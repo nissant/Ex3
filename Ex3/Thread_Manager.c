@@ -247,7 +247,7 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 	bool				keepGoing = TRUE;
 	
-	wait_res = WaitForSingleObject(thread_info->ogen_mutex_array[thread_info->max_number-2], INFINITE);  // access to global counter - each thread updates the counter when finishing
+	wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
 	if (WAIT_OBJECT_0 != wait_res)
 	{
 		printf("Error when waiting for global counter mutex\n");
