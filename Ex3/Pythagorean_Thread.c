@@ -20,7 +20,7 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 	//ReleaseSemaphore(buffer_full_sem, 1, NULL);
 	for (i = 0; i < thread_info->max_number; i++)
 	{
-		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen mutex
+		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen i mutex
 		if (WAIT_OBJECT_0 != wait_code)
 		{
 			printf("Error when waiting for ogen mutex in place %d\n",i);

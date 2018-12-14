@@ -16,9 +16,10 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 /*
 Function cleanThreadContainer
 ------------------------
-Description –
-Parameters	–
-Returns		– 
+Description – This function allocates memory, mutex and program semaphores, also the thread container is loaded with initial values.
+				If failure is detected on any phase, the function cleans up and raises ERROR_CODE.
+Parameters	– **argv pointer to command line argument pointer array, *thread_data_ptr points to the thread container that holds the buffer and ogen ADT 
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
 */
 int initThreadContainer(char **argv, thread_container *thread_data_ptr) {
 
@@ -145,8 +146,9 @@ Mem_Clean:
 /*
 Function cleanThreadContainer
 ------------------------
-Description – 
-Parameters	– 
+Description – This function closes handles of program semaphores, mutexes that have been successfully opened, and also frees up the dynamically allocated
+				memory. 
+Parameters	– *thread_data_ptr - 
 Returns		– None
 */
 void cleanThreadContainer(thread_container *thread_data_ptr) {
@@ -180,8 +182,8 @@ void cleanThreadContainer(thread_container *thread_data_ptr) {
 Function runProducerConsumerThreads
 ------------------------
 Description – The function opens the tests threads and returns a list of thread handles
-Parameters	– *test_list_ptr pointer to test list, *thread_handles pointer to array of list handles
-Returns		– 0 for success, -1 for failure
+Parameters	– *thread_data_ptr points to the thread container that holds the buffer ADT, *thread_handles pointer to array of list handles
+Returns		– 0 for success, ERROR_CODE for failure
 */
 int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread_handles) {
 	int i, j;
@@ -190,7 +192,7 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 	DWORD thread_id;
 
 	if (thread_handles == NULL) {
-		return -1;
+		return ERROR_CODE;
 	}
 
 	// Itterate over producing thread count and open threads
@@ -211,7 +213,7 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 				CloseHandle(thread_handles[j]);
 			}
 			CloseHandle(thread_handles[0]);
-			return -1;
+			return ERROR_CODE;
 		}
 	}
 	// Create sorting thread
@@ -225,19 +227,21 @@ int runProducerConsumerThreads(thread_container *thread_data_ptr, HANDLE *thread
 
 	if (thread_handles[thread_data_ptr->prod_thread_count] == NULL) {
 		printf("Failed to create sort thread!\n");
-		return -1;
+		return ERROR_CODE;
 	}
 
-	return 0;
+	return SUCCESS_CODE;
 }
 
 
 /*
 Function sortConsumer
 ------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This is the sorting (consumer) thread routine. It will keep running as long as producing threads are still alive.
+				After all producers have finished, the buffer will be checked and cleared one last time, and the global array pythagorean_triple_lst
+				will be sorted using (n,m) comparatore function.
+Parameters	– lpParam - void pointer to the thread data container that holds all relevant information for thread opperations.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
 */
 DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	DWORD				wait_res; 
@@ -247,38 +251,19 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 	thread_container	*thread_info = (thread_container*)lpParam;		// Get pointer to thread data container
 	bool				keepGoing = TRUE;
 	
-	//wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  // access to global counter - each thread updates the counter when finishing
-	//if (WAIT_OBJECT_0 != wait_res)
-	//{
-	//	printf("Error when waiting for global counter mutex\n");
-	//	return ERROR_CODE;
-	//}
-	// critical area - update counter
-	//t_counter = thread_counter;
-	// finished critical area
-	//ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-	//if (FALSE == ret_val)
-	//{
-	//	printf("Error when releasing global counter mutex\n");
-	//	return ERROR_CODE;
-	//}
-
 	while (thread_counter < thread_info->prod_thread_count)				//	While threads haven't finished passing data to buffer and exit
 	{
-		
-		if (isDataInbuffer(thread_info)) { 
-			// Consumer thread waits and decraments 'full' semaphore - It's consumption time!
-			wait_res = WaitForSingleObject(buffer_full_sem, INFINITE);
-			if (wait_res != WAIT_OBJECT_0) {
-				printf("Error when waiting for buffer semaphore!\n");
-				return ERROR_CODE;
-			}
-		}
-		else {	// No data in buffer
+		// Consumer thread waits for buffer available semaphore - It's consumption time!
+		wait_res = WaitForSingleObject(buffer_full_sem, SORT_BUFFER_WAITE_MS);
+		if (wait_res == WAIT_TIMEOUT) {
 			continue;
 		}
+		if (wait_res != WAIT_OBJECT_0) {
+			printf("Error when waiting for buffer full semaphore!\n");
+			return ERROR_CODE;
+		}
 		
-		// Clear one entry from buffer
+		// Pop one entry from buffer
 		if (clear_buffer(thread_info, false) != 0) {
 			printf("Error when clearing buffer!\n");
 			return ERROR_CODE;
@@ -293,38 +278,22 @@ DWORD WINAPI sortConsumer(LPVOID lpParam) {
 			printf("Error when releasing buffer semaphore!\n");
 			return ERROR_CODE;
 		}
-
-		// access to global counter - each thread updates the counter when finishing
-		//wait_res = WaitForSingleObject(thread_counter_mutex, INFINITE);  
-		//if (WAIT_OBJECT_0 != wait_res)
-		//{
-		//	printf("Error when waiting for global counter mutex\n");
-		//	return ERROR_CODE;
-		//}
-		// critical area - update counter
-		//t_counter = thread_counter;
-		// finished critical area
-		//ret_val = ReleaseMutex(thread_counter_mutex);	//release mutex of global counter
-		//if (FALSE == ret_val)
-		//{
-		//	printf("Error when releasing global counter mutex\n");
-		//	return ERROR_CODE;
-		//}
 	}
 
 	// At this point all threads have exited successfully after inserting data into buffer
-	clear_buffer(thread_info, true);	// Clear buffer
+	clear_buffer(thread_info, true);	// Clear all buffer entries
 	qsort(pythagorean_triple_lst, pythagorean_triple_counter, sizeof(triple), cmp_function);	// Sort the array
 	return SUCCESS_CODE;
 }
 
 
 /*
-Function sortConsumer
+Function clear_buffer
 ------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This function is used to pop one or all of the elements in the buffer and transfer to the global pythagorean_triple_lst array
+Parameters	– *thread_info points to the thread container that holds the buffer ADT, clearall - boolean flag that selects if one element is cleared or if the 
+				entire buffer is cleared.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
 */
 int clear_buffer(thread_container *thread_info, bool clearall) {
 	int i;
@@ -370,35 +339,11 @@ int clear_buffer(thread_container *thread_info, bool clearall) {
 
 
 /*
-Function sortConsumer
+Function cmp_function
 ------------------------
-Description –
-Parameters	–
-Returns		–
-*/
-bool isDataInbuffer(thread_container *thread_info) {
-	int i;
-	DWORD wait_res, release_res;
-
-	for (i = 0; i < thread_info->buffer_size; i++) {
-		if (thread_info->pyth_triple_buffer[i].data_flag == 1) {			// Found data availabe in buffer entry
-			return true;
-		}
-		else{
-			continue;
-		}
-	}
-	// No data found in buffer
-	return false;
-}
-
-
-/*
-Function sortConsumer
-------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This comparatore function is used by qsort() in order to implament the (n,m) comparison requirement
+Parameters	– * a,  * b - null pointers that point to an arbitrary data type variables that are held in the array being sorted by qsort
+Returns		– 1 or -1 according to compare result
 */
 int cmp_function(const void * a, const void * b) {
 	triple *firstTriple = (triple*)a;
@@ -424,11 +369,11 @@ int cmp_function(const void * a, const void * b) {
 
 
 /*
-Function sortConsumer
+Function closeThreadHandles
 ------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This function closes the thread handles that where opened
+Parameters	– *thread_handles is the complete array of thread handles; thread_count is the totall thread count (sort thread included);
+Returns		– None
 */
 void closeThreadHandles(HANDLE *thread_handles,int thread_count) {
 	for (int i = 0; i < thread_count-1; i++) {
@@ -438,32 +383,36 @@ void closeThreadHandles(HANDLE *thread_handles,int thread_count) {
 
 
 /*
-Function sortConsumer
+Function checkArgs
 ------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This function validates that the number of arguments are according to program requirements
+Parameters	– argc - command line argument counter; num - required number of arguments
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
 */
 int checkArgs(int argc, int num) {
 	if (argc < num+1) {
 		printf("Not enough input arguments, couldn't complete the task!\n");
+		return ERROR_CODE;
 	}
 
 	else if (argc > num+1) {
 		printf("Too many input arguments, couldn't complete the task!\n");
+		return ERROR_CODE;
 	}
-	return 0;
+	return SUCCESS_CODE;
 }
 
 
 /*
-Function sortConsumer
+Function checkThreadsAndPrint
 ------------------------
-Description –
-Parameters	–
-Returns		–
+Description – This function checks thread routine exit codes. If any problems are found, ERROR_CODE is raised,
+				otherwise the outpud file is written and SUCCESS_CODE is raised.
+Parameters	–  *thread_handles is the complete array of thread handles; thread_count is the totall thread count (sort thread included);
+				thread_container *thread_data_ptr; *path is the full path to output txt file.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
 */
-int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_container *thread_data_ptr, char *path) {
+int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, char *path) {
 	DWORD ExitCode;
 	DWORD *lpExitCode = &ExitCode;
 	int i;
@@ -472,7 +421,7 @@ int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_contai
 	for (i = 0; i < thread_count;i++) {
 		if (GetExitCodeThread(thread_handles[i], lpExitCode)) {
 			if (ExitCode != 0) {
-				if (i == thread_count-1)
+				if (i == thread_count -1)
 					printf("Error in sorting thread execution! Exit code = 0x%x\n", ExitCode);
 				else
 					printf("Error in calculation thread %d execution! Exit code = 0x%x\n", i, ExitCode);
@@ -480,20 +429,73 @@ int checkThreadsAndPrint(HANDLE *thread_handles, int thread_count, thread_contai
 			}
 		}
 	}
-	if (errFlag != 0)
-		return -1;
-
+	if (errFlag != 0) {
+		return ERROR_CODE;
+	}
+		
 	FILE *fp_results = fopen(path, "w");
 	if (fp_results == NULL)							// Handle errors
 	{
 		printf("Error when opening output file stream!\n");
-		return (-1);
+		return (ERROR_CODE);
 	}
 
 	for (i = 0; i < pythagorean_triple_counter;i++) {
 		fprintf(fp_results, "%d,%d,%d\n", pythagorean_triple_lst[i].a, pythagorean_triple_lst[i].b, pythagorean_triple_lst[i].c);
 	}
 	fclose(fp_results);
-	return 0;
+	return SUCCESS_CODE;
+}
+
+
+/*
+Function waitForThreads
+------------------------
+Description – This function handles the limitation of using WaitForMultipleObjects API routine that can only handle 64 active threads while Ex3 
+				asked for 100 producing threads and 1 sorting thread.
+Parameters	– *thread_handles is the complete array of thread handles; thread_count is the totall thread count (sort thread included).
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
+*/
+int waitForThreads(HANDLE *thread_handles, int thread_count) {
+	DWORD wait_code;
+	if (thread_count <= 64) {
+		wait_code = WaitForMultipleObjects((DWORD)thread_count, thread_handles, true, INFINITE);
+		if (wait_code != WAIT_OBJECT_0) {
+			return ERROR_CODE;
+		}
+		else {
+			return 0;
+		}
+	}
+	else {	// Handle WaitForMultipleObjects limitation of 64 threads & question requirement of max 100 threads
+		HANDLE *first_thrd_handle_array[64];
+		HANDLE *second_thrd_handle_array = (HANDLE*)malloc(sizeof(HANDLE)*(thread_count - 64));
+		if (second_thrd_handle_array == NULL) {
+			return ERROR_CODE;
+		}
+		int j = 0;
+		int i;
+		for (i = 0; i < 64; i++) {
+			first_thrd_handle_array[i] = thread_handles[i];
+		}
+		for (i = 64; i < thread_count; i++) {
+			second_thrd_handle_array[j] = thread_handles[i];
+			j++;
+		}
+		wait_code = WaitForMultipleObjects((DWORD)64, first_thrd_handle_array, true, INFINITE);
+		if (wait_code != WAIT_OBJECT_0) {
+			free(second_thrd_handle_array);
+			return ERROR_CODE;
+		}
+		wait_code = WaitForMultipleObjects((DWORD)(thread_count - 64), second_thrd_handle_array, true, INFINITE);
+		if (wait_code != WAIT_OBJECT_0) {
+			free(second_thrd_handle_array);
+			return ERROR_CODE;
+		}
+		else {
+			free(second_thrd_handle_array);
+			return SUCCESS_CODE;
+		}
+	}
 }
 

@@ -7,24 +7,22 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 
 
 #ifndef PYTHAGOREAN_THREAD_H
-#define PYTHAGOREAN_THREAD_H
+	#define PYTHAGOREAN_THREAD_H
 
-#define ERROR_CODE -1
-#define SUCCESS_CODE 0
-
-// Includes --------------------------------------------------------------------
+	// Includes --------------------------------------------------------------------
 
 
-// Constants -------------------------------------------------------------------
+	// Defines -------------------------------------------------------------------
+	#define ERROR_CODE -1
+	#define SUCCESS_CODE 0
 
+	// Function Declarations -------------------------------------------------------
 
-// Function Declarations -------------------------------------------------------
-
-int FindBuffSlot(thread_container *thread_info);
-void CalcABC(int n, int m, int *a, int *b, int *c);
-int FindGCD(int n, int m);
-int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info);
-int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info);
-DWORD WINAPI PythThreadFunc(LPVOID lpParam);
+	int FindBuffSlot(thread_container *thread_info);
+	void CalcABC(int n, int m, int *a, int *b, int *c);
+	int FindGCD(int n, int m);
+	int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info);
+	int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info);
+	DWORD WINAPI PythThreadFunc(LPVOID lpParam);
 
 #endif // 
