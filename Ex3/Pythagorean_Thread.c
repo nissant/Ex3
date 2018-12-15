@@ -5,9 +5,19 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 				- This module handles the pythgorean triplet calculation thread routines
 */
 
+// Includes --------------------------------------------------------------------
 #include "Thread_Manager.h"
 #include "Pythagorean_Thread.h"
 
+/*
+Function PythThreadFunc
+------------------------
+Description – This function is the main function that executes in the "calculation thread". the function goes over the "ogens" and try to find
+			  an ogen and to calculate tripelt.
+Parameters	 lpParam is the parameter sent when creating the tread. it contains a struct with relevant data needed for the calculation thread
+			 such as main function parameters, mutex aray pointers , etc.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
+*/
 DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 {
 	int i;
@@ -17,7 +27,6 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 	BOOL				ret_val;
 	thread_container	*thread_info = (thread_container*)lpParam;	// Get pointer to relevcant data needed for execution in this thread
 
-	//ReleaseSemaphore(buffer_full_sem, 1, NULL);
 	for (i = 0; i < thread_info->max_number; i++)
 	{
 		wait_code = WaitForSingleObject(thread_info->ogen_mutex_array[i], INFINITE);   // access ogen i mutex
@@ -69,6 +78,14 @@ DWORD WINAPI PythThreadFunc(LPVOID lpParam)
 	return SUCCESS_CODE;
 }
 
+/*
+Function CalcTripletPutInBuffer
+------------------------
+Description – This function calculates all the triplets with a specific "ogen number" (n).
+Parameters	- n is the ogen. m is the max number recieved as a main function parameter. *thread_info contains a struct with relevant
+			  data and pointers such as mutex arrays, buffer pointer, etc.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
+*/
 int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
 {
 	int a, b, c, m;
@@ -94,6 +111,14 @@ int CalcTripletPutInBuffer(int n, int max, thread_container *thread_info)
 	return SUCCESS_CODE;
 }
 
+/*
+Function PutInBuffer
+------------------------
+Description – This function gets a triplet and puts it in an empty buffer slot
+Parameters	- n,m are the two numbers which the tripelt is being calculated with accordance to. a,b,c are the tripelt itself.
+			   *thread_info contains a struct with relevant data and pointers such as mutex arrays, buffer pointer, etc.
+Returns		– SUCCESS_CODE for success, ERROR_CODE for failure
+*/
 int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info)
 {
 	DWORD				wait_code_sema;
@@ -136,6 +161,13 @@ int PutInBuffer(int n, int m, int a, int b, int c, thread_container *thread_info
 	}
 }
 
+/*
+Function FindGCD
+------------------------
+Description – This function finds the Greates Common Divisor of two numbers and returns it.
+Parameters	- n,m are the two numbers that a common divisor is being calculated for.
+Returns		– Returns the GCD
+*/
 int FindGCD(int n, int m)
 {
 	int  i, gcd;
@@ -148,6 +180,13 @@ int FindGCD(int n, int m)
 	return gcd;
 }
 
+/*
+Function CalcABC
+------------------------
+Description – This function calcualtes and updates the a,b,c pointers with the calculated tripelt.
+Parameters	- n,m are the two numbers used to calculate the tripelt (a,b,c) according to the given formula
+Returns		– Returns nothing. The function updates the a,b,c pointers with the calculation result.
+*/
 void CalcABC(int n, int m, int *a, int *b, int *c)
 {
 	*a = (m*m) - (n*n);
@@ -155,6 +194,13 @@ void CalcABC(int n, int m, int *a, int *b, int *c)
 	*c = (m*m) + (n*n);
 }
 
+/*
+Function FindBuffSlot
+------------------------
+Description – This function goes over the buffer flag array and looks for a free slot in the buffer.
+Parameters	-  *thread_info contains a struct with relevant data and pointers such as mutex arrays, buffer pointer, etc.
+Returns		– Returns Error code for failure or the buffer slot index that found to be empty.
+*/
 int FindBuffSlot(thread_container *thread_info)
 {
 	DWORD	wait_code;

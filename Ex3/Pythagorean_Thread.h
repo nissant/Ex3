@@ -9,8 +9,6 @@ Description		- This program finds Pythagorean triplets using thread "parallelism
 #ifndef PYTHAGOREAN_THREAD_H
 	#define PYTHAGOREAN_THREAD_H
 
-	// Includes --------------------------------------------------------------------
-
 
 	// Defines -------------------------------------------------------------------
 	#define ERROR_CODE -1
