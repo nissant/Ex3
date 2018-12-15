@@ -20,7 +20,7 @@ Description		- This program finds Pythagorean triples using thread "parallelism"
 	#define THREAD_MANAGER_H
 
 	// Defines ---------------------------------------------------------------------
-	#define ERROR_CODE ERROR_CODE
+	#define ERROR_CODE -1
 	#define SUCCESS_CODE 0
 	#define SORT_BUFFER_WAITE_MS 40
 
